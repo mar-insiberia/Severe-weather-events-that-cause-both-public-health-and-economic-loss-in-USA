@@ -1,0 +1,352 @@
+---
+title:  Severe weather events that cause both public health and economic loss in USA
+  (1950-2012)
+author: "Mar"
+date: "14/06/2020"
+output: html_document
+---
+Storms and other severe weather events can cause both public health and economic problems for communities and municipalities. Many severe events can result in fatalities, injuries, and property damage, and preventing such outcomes to the extent possible is a key concern.
+This project involves exploring the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database. This database tracks characteristics of major storms and weather events in the United States, including when and where they occur, as well as estimates of any fatalities, injuries, and property damage.
+
+## Synopsis
+The analysis of the historical (NOAA) storm database shows that tornadoes are the most dangerous weather event type to the population health in the USA, followed by heat and floods leaving thousands injuried, or resulting in fatalities. Weather events also caused great impact on the economy, with floods and thunderstorms causing billions of dollars in property damage. There is also great economic loss in the agriculture sector; the most significant weather events that caused crop damage are drought, floods, hurricanes and hail. 
+
+##  Data processing 
+
+Download the raw data file, extract the data and select the columns of interest. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(data.table)
+library(gridExtra)
+library(cowplot)
+library(ggplot2)
+
+download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2", "StormData.csv")
+path <- getwd()
+list.files()
+data <- read.csv("StormData.csv")
+
+# Subset the data
+colnames(data)
+data1 <- data%>% 
+  select("BGN_DATE","STATE", "EVTYPE", "FATALITIES", "INJURIES", "PROPDMG", "PROPDMGEXP", "CROPDMG", "CROPDMGEXP")%>%
+  filter(INJURIES > 0 | FATALITIES > 0 | PROPDMG > 0 | CROPDMG > 0)
+
+```
+
+
+The original data has many misspelled words and variables in the EVTYPE (event type) column which refer to the same type of event. Therefore the most significant events were grouped. 
+
+```{r Clear EVTYPE column}
+dt <- data1 %>% 
+mutate(EVTYPE = replace(EVTYPE, EVTYPE %in% c("THUNDERSTORM WIND G50","THUNDERSTORM WINDS/FUNNEL CLOU","THUNDERSTORM  WINDS","THUNDERSTORMS WIND","THUNDERSTORM WINDS.","THUNDERSTORM WIND/ TREES","THUNDERSTORM WIND/ TREE","THUNDERSTORM WIND G55","THUNDERSTORM WINDS G60","THUNDERSTORM WIND TREES","THUNDERSTORM WIND.","THUNDERSTORM WINDSHAIL","THUNDERSTORM WIND 65 MPH","THUDERSTORM WINDS","THUNDERSTORM WINDS 63 MPH","THUNDERSTORM WIND G52","HUNDERSTORM WINDS AND","Tstm Wind","THUNDERSTORMW","TSTMW","TSTM WIND 40","TSTM WIND 45","TSTM WIND (G35)", "TSTM WIND", "TSTM WINDS","TSTM WIND 40", "TSTM WIND (41)", "TSTM WIND 65)", "TSTM WIND G58", "TSTM WIND 55", "THUNDERSTORM WIND 65MPH", "THUNDERSTORM WIND 98 MPH","THUNDERSTORM WIND 60 MPH", "THUNDERSTORM DAMAGE TO", "THUNDERSTORM WIND (G40)", "THUNDEERSTORM WINDS", "Tstm Wind", "THUNDERSTORMWINDS", "THUNDERSNOW","THUNDERESTORM WINDS", "THUDERSTORM WINDS", "SEVERE THUNDERSTORM", "SEVERE THUNDERSTORMS", "SEVERE THUNDERSTORM WINDS", " TSTM WIND (G45)","THUNDERSTORM WINDS", "THUNDERSTORM WIND", "TSTM WIND (G40)", "TSTM WIND (G45)", "TSTM WIND G45", "TUNDERSTORM WIND", "THUNDERSTORM WINDSS", "THUNDERSTORM WINS", "THUNDERSTORMS", "THUNDERTORM WINDS", "THUNERSTORM WINDS", "THUNDERTORM WINDS", "THUNDERSTROM WIND", "	THUNDERSTORMS WINDS", "THUNDERSTORM WINDS53", "THUNDERSTORM WINDS 13", "THUNDERSTORM WIND 98 MPH", "TSTM WIND  (G45)", "TSTM WIND DAMAGE", "THUNDERSTROM WIND", "THUNDERSTORMS WINDS", "THUNDERSTORM WINDSS", "THUNDERSTORM WINDS AND", " TSTM WIND", "TSTM WIND/HAIL", "TSTM WIND AND LIGHTNING", "THUNDERSTORM WINDS/HAIL", "THUNDERSTORM WINDS/FLOODING", "THUNDERSTORM WINDS/ FLOOD", "THUNDERSTORM WINDS LIGHTNING", "THUNDERSTORM WINDS HAIL", "THUNDERSTORM WIND/LIGHTNING", "THUNDERSTORM WIND/AWNING", "THUNDERSTORM WIND G60", "THUNDERSTORM HAIL", "THUNDERSTORM WIND/HAIL"), "THUNDERSTORMS"))
+
+dt2 <- dt %>% mutate (EVTYPE = replace(EVTYPE, EVTYPE %in% c("HEAT WAVES", "HEAT WAVE","RECORD/EXCESSIVE HEAT","EXCESSIVE HEAT","EXTREME HEAT", "RECORD HEAT", "Heat Wave", "UNSEASONABLY WARM", "UNSEASONABLY WARM AND DRY", "WARM WEATHER"), "HEAT"))  
+
+dt3 <- dt2 %>% mutate (EVTYPE = replace(EVTYPE, EVTYPE %in% c("FROST\\FREEZE", "Early Frost","Frost/Freeze","FROST/FREEZE","FREEZE", "AGRICULTURAL FREEZE", "DAMAGING FREEZE","HARD FREEZE", "Freeze", "Damaging Freeze", "ICE ROADS", "ICE ON ROAD", "ICE", "GLAZE ICE", "ICE FLOES", "ICE JAM", "BLACK ICE", "GLAZE"), "FROST"))  
+
+dt4 <- dt3 %>% mutate (EVTYPE = replace(EVTYPE, EVTYPE %in% c("FLOOD/FLASH/FLOOD", " FLASH FLOOD", "FLASH FLOOD","FLASH FLOODING","FLASH FLOODING/THUNDERSTORM WI", "FLOODING", "BREAKUP FLOODING", "RIVER FLOOD", "COASTAL FLOOD", "FLOODING/HEAVY RAIN", "FLOOD/FLASH FLOOD", "FLOOD/RAIN/WINDS", "FLASH FLOOD WINDS", "FLASH FLOOD/", "URBAN FLOOD", "COASTAL FLOODING", "URBAN/SMALL STREAM FLOOD", "URBAN FLOODING", "MINOR FLOODING", "FLASH FLOODS", "FLOODS", "RURAL FLOOD","MAJOR FLOOD", "SMALL STREAM FLOOD", "LAKE FLOOD", "URBAN AND SMALL STREAM FLOODIN", "RIVER AND STREAM FLOOD", "RIVER FLOODING", "FLOOD/RIVER FLOOD","FLASH FLOOD FROM ICE JAMS","FLASH FLOOD - HEAVY RAIN", "FLASH FLOOD/ STREET", "FLOOD FLASH", "FLASH FLOOD/FLOOD", "FLOOD/FLASH", "SNOWMELT FLOODING", "FLASH FLOODING/FLOOD", "FLOOD & HEAVY RAIN", "FLOOD/FLASHFLOOD", "URBAN FLOODS", "FLASH FLOOD/LANDSLIDE", "FLASH FLOOD LANDSLIDES", "Ice jam flood (minor", "River Flooding", "Coastal Flooding", "TIDAL FLOODING", "Tidal Flooding", "Coastal Flood", "LAKESHORE FLOOD", "COASTAL  FLOODING/EROSION", "RAPIDLY RISING WATER", "URBAN/SML STREAM FLD", "ICE JAM FLOODING"), "FLOODS"))  
+
+dt5 <- dt4 %>% mutate (EVTYPE = replace(EVTYPE, EVTYPE %in% c("HAIL/WINDS", "HAIL/WIND","HAIL 150","HAIL 100","HAIL 075","HAIL 0.75","HAIL 75","HAIL 175", "HAIL 450", "HAIL 275" ,"HAIL 125", "HAIL 200", "HAILSTORM", "HAIL DAMAGE", "SMALL HAIL", "GUSTY WIND/HAIL" ), "HAIL"))  
+
+dt6 <- dt5 %>% mutate (EVTYPE = replace(EVTYPE, EVTYPE %in% c("TORNADO F0", "WATERSPOUT/TORNADO","WATERSPOUT TORNADO","TORNADOES, TSTM WIND, HAIL","WATERSPOUT-TORNADO","COLD AIR TORNADO","WATERSPOUT/ TORNADO","TORNADO F3", "TORNDAO", "TORNADO F1" ,"TORNADO F2", "TORNADOES", "WATERSPOUT-"), "TORNADOES"))  
+
+dt7 <- dt6 %>% mutate (EVTYPE = replace(EVTYPE, EVTYPE %in% c("HEAVY SNOW", "HEAVY SNOW/WIND","HEAVY SNOWPACK","FREEZING RAIN/SNOW","SNOW AND HEAVY SNOW","SNOW/HEAVY SNOW","SNOW AND ICE","SNOW AND ICE STORM", "HEAVY LAKE SNOW", "HEAVY SNOW/FREEZING RAIN" ,"HEAVY SNOW/WINTER STORM", "HEAVY SNOW AND HIGH WINDS", "HEAVY SNOW/HIGH WINDS & FLOOD", "SNOW/COLD", "HEAVY SNOW SQUALLS", "SNOW SQUALL", "SNOW/ICE STORM", "HEAVY SNOW-SQUALLS", "SNOW FREEZING RAIN", "SNOW/FREEZING RAIN", "SNOW/SLEET/FREEZING RAIN", "SNOW/SLEET", "SNOW SQUALLS","RECORD SNOW", "BLOWING SNOW", "HEAVY SNOW/BLIZZARD", "ICE AND SNOW", "HEAVY SNOW/ICE", "SNOW/ICE", "HEAVY SNOW/BLIZZARD/AVALANCHE", "SNOW/ BITTER COLD", "SNOW/HIGH WINDS", "HEAVY SNOW AND STRONG WINDS", "SNOW ACCUMULATION", "SNOW/BLOWING SNOW", "Heavy snow shower", "Light snow", "Light Snow", "Snow Squalls", "Light Snowfall", "Snow", "COLD AND SNOW", "RAIN/SNOW", "LIGHT SNOW", "blowing snow", "EXCESSIVE SNOW", "LATE SEASON SNOW", "FALLING SNOW/ICE", "SNOW/ ICE", "HEAVY SNOW/SQUALLS"), "SNOW"))  
+
+dt8 <- dt7 %>% mutate (EVTYPE = replace(EVTYPE, EVTYPE %in% c("TROPICAL STORM ALBERTO", "TROPICAL STORM GORDON", "TROPICAL STORM JERRY", "TROPICAL STORM DEAN", "TROPICAL DEPRESSION"), "TROPICAL STORMS"))  
+
+dt9 <- dt8 %>% mutate (EVTYPE = replace(EVTYPE, EVTYPE %in% c("GRASS FIRES", "FOREST FIRES", "WILDFIRES", "WILD/FOREST FIRES", "WILD/FOREST FIRE", "BRUSH FIRE", "WILDFIRE"), "WILD FIRES"))  
+
+dt10 <- dt9 %>% mutate (EVTYPE = replace(EVTYPE, EVTYPE %in% c("Landslump", "LANDSLIDE", "Mudslides", "Mudslide", "MUDSLIDES", "MUD SLIDE", "MUD SLIDES", "MUD SLIDES URBAN FLOODING", "ROCK SLIDE", "LANDSPOUT", "MUDSLIDE"), "LANDSLIDES"))  
+
+dt11 <- dt10 %>% mutate (EVTYPE = replace(EVTYPE, EVTYPE %in% c("LIGHTNING AND HEAVY RAIN","LIGHTNING/HEAVY RAIN", "LIGHTNING INJURY", "LIGHTNING.", "LIGNTNING", "LIGHTNING THUNDERSTORM WINDS", "LIGHTNING AND THUNDERSTORM WIN", "LIGHTNING  WAUSEON", "LIGHTNING FIRE", "LIGHTING"), "LIGHTNING")) 
+
+dt12 <- dt11 %>% mutate (EVTYPE = replace(EVTYPE, EVTYPE %in% c("Heavy Rain/High Surf", "Torrential Rainfall", "HEAVY RAINS", "HEAVY RAIN/LIGHTNING", "RAINSTORM", "HEAVY RAIN/SNOW", "HEAVY RAIN/SEVERE WEATHER", "HVY RAIN", "HEAVY RAIN AND FLOOD", "RAIN/WIND", "HEAVY PRECIPITATION", "HEAVY RAINS/FLOODING", "EXCESSIVE RAINFALL", "HEAVY RAIN/SMALL STREAM URBAN", "Torrential Rainfall", "UNSEASONAL RAIN", "RECORD RAINFALL", "HEAVY SHOWER"), "HEAVY RAIN")) 
+
+dt13 <- dt12 %>% mutate (EVTYPE = replace(EVTYPE, EVTYPE %in% c("EXTREME COLD", "COLD AND WET CONDITIONS", "RECORD COLD", "COLD WAVE", "GLAZE/ICE STORM", "FOG AND COLD TEMPERATURES", "UNSEASONABLY COLD", "LOW TEMPERATURE", "Unseasonable Cold", "Extreme Cold", "Extended Cold", "Cold", "Freezing Spray", "Glaze", "Cold Temperature", "EXTREME COLD/WIND CHILL", "COLD/WIND CHILL", "COLD", "FREEZING RAIN", "FREEZING RAIN/SLEET", "FREEZING DRIZZLE", "Freezing Spray", "Freezing Drizzle", "Freezing Rain", "Freezing drizzle", "LIGHT FREEZING RAIN", "FREEZING FOG", "COLD/WIND CHILL", "WINTER WEATHER MIX", "WINTRY MIX", "WINTER WEATHER/MIX", "Wintry Mix", "EXTREME WINDCHILL", "COLD/WINDS", "ICE/STRONG WINDS", "HIGH WINDS/SNOW", "ICY ROADS", "COOL AND WET"), "COLD WEATHER")) 
+
+dt14 <- dt13 %>% mutate (EVTYPE = replace(EVTYPE, EVTYPE %in% c("HIGH WINDS", "WIND", "HIGH WIND", "HIGH WINDS HEAVY RAINS", " HIGH WIND/SEAS", "HIGH WINDS/HEAVY RAIN", "GUSTY WINDS", "WINTER STORM HIGH WINDS", "STRONG WIND", "HIGH WIND DAMAGE", "DRY MIRCOBURST WINDS", "MICROBURST WINDS", "DRY MICROBURST", "STRONG WINDS", "HIGH WINDS/", "HIGH  WINDS", "WIND DAMAGE", "WIND STORM", "WIND/HAIL", "HIGH WINDS/COASTAL FLOOD", "DUST STORM/HIGH WINDS", "STORM FORCE WINDS", "HIGH WIND/HEAVY SNOW", "HIGH WIND/BLIZZARD", "HIGH WINDS/COLD", "HIGH WIND AND SEAS", "HIGH WIND 48", "Strong Wind", "Strong Winds", "Whirlwind", "Wind Damage", "Microburst", "Wind", "Gusty Winds", "Gusty wind/rain", "GUSTY WIND/HVY RAIN", "GUSTY WIND", "HIGH WIND (G40)", "MICROBURST", "HIGH WIND/SEAS", "EXTREME WIND CHILL", "Gradient wind", "GRADIENT WIND", "gradient wind", "Gusty winds"), "WIND")) 
+
+dt15 <- dt14 %>% mutate (EVTYPE = replace(EVTYPE, EVTYPE %in% c("HURRICANE ERIN", "HURRICANE OPAL/HIGH WINDS", "HURRICANE OPAL", "HURRICANE", "HURRICANE-GENERATED SWELLS", "HURRICANE EMILY", "HURRICANE GORDON", "HURRICANE FELIX", "Hurricane Edouard", "HURRICANE/TYPHOON"), "HURRICANES")) 
+
+dt16 <- dt15 %>% mutate (EVTYPE = replace(EVTYPE, EVTYPE %in% c("HIGH SEAS", "HIGH TIDES", "HIGH SURF", "HEAVY SURF COASTAL FLOODING", "HEAVY SURF", "RIP CURRENTS/HEAVY SURF", "ROUGH SURF", "RIP CURRENT", "HIGH WAVES", "HEAVY SEAS", "HIGH WATER", "ROUGH SURF", "Heavy Surf", "High Surf", "Heavy surf and wind", "ROUGH SEAS", "ROGUE WAVE", "   HIGH SURF ADVISORY", "HAZARDOUS SURF", "ASTRONOMICAL HIGH TIDE", " HEAVY SURF/HIGH SURF"), "RIP CURRENTS")) 
+
+dt17 <- dt16 %>% mutate (EVTYPE = replace(EVTYPE, EVTYPE %in% c("WINTER STORMS", "STORM SURGE", "TROPICAL STORM", "SLEET/ICE STORM", "BLIZZARD/WINTER STORM", "COASTAL STORM", "Coastal Storm", "COASTALSTORM", "STORM SURGE/TIDE", "ICE STORM/FLASH FLOOD", "DUST STORM", "ICE STORM"), "STORMS")) 
+
+dt18 <- dt17 %>% mutate (EVTYPE = replace(EVTYPE, EVTYPE %in% c ("AVALANCE", "AVALANCHE"), "AVALANCHES")) 
+
+dt19 <- dt18 %>% mutate (EVTYPE = replace(EVTYPE, EVTYPE %in% c ("HEAT WAVE DROUGHT", "DROUGHT/EXCESSIVE HEAT"), "DROUGHT")) 
+
+
+```
+
+Remove punctuation and convert all variables to upper case
+```{r}
+dt19$PROPDMGEXP = toupper(dt19$PROPDMGEXP)
+dt19$CROPDMGEXP = toupper(dt19$CROPDMGEXP)
+
+# Remove character (+, $, -, ?, etc)
+dt19$PROPDMGEXP <-  gsub("[[:blank:][:punct:] +]", " ", dt19$PROPDMGEXP)
+dt19$CROPDMGEXP <-  gsub("[[:blank:][:punct:] +]", " ", dt19$CROPDMGEXP)
+dt19$EVTYPE <-  gsub("[[:blank:][:punct:] +]", "", dt19$EVTYPE)
+
+unique(dt19$PROPDMGEXP)
+unique(dt19$CROPDMGEXP)
+unique(dt19$EVTYPE)
+```
+
+### Convert property and crop to correct values by multiplying them by the exponent variable.
+
+The original data contain two columns each for property and crop damage, the columns  PROPDMG and CROPDMG have values in dollars and columns PROPDMGEXP and CROPDMGEXP have the exponent. Therefore, the columns with exponents need transformation in order to calculate the property and crop damage for each event.
+
+```{r Exponential transformation of PROPDMGEXP and CROPDMGEXP }
+
+# Exponential transformation for values (H=Hundreds, K=Thousands, M=Millions, B=Billions) 
+
+options(scipen = 999)  # Turn off scientific notations for numbers 
+
+dt19$PROPDMGEXP2[grepl("H", dt19$PROPDMGEXP,ignore.case = TRUE)]<-100
+dt19$PROPDMGEXP2[grepl("K", dt19$PROPDMGEXP,ignore.case = TRUE)]<-1000
+dt19$PROPDMGEXP2[grepl("M", dt19$PROPDMGEXP,ignore.case = TRUE)]<-1000000
+dt19$PROPDMGEXP2[grepl("B", dt19$PROPDMGEXP,ignore.case = TRUE)]<-1000000000
+
+dt19$CROPDMGEXP2[grepl("H", dt19$CROPDMGEXP,ignore.case = TRUE)]<-100
+dt19$CROPDMGEXP2[grepl("K", dt19$CROPDMGEXP,ignore.case = TRUE)]<-1000
+dt19$CROPDMGEXP2[grepl("M", dt19$CROPDMGEXP,ignore.case = TRUE)]<-1000000
+dt19$CROPDMGEXP2[grepl("B", dt19$CROPDMGEXP,ignore.case = TRUE)]<-1000000000
+
+## Ccompute damage 
+dt19$PROPDMGEXP3 <- dt19$PROPDMG * dt19$PROPDMGEXP2
+dt19$CROPDMGEXP3 <- dt19$CROPDMG * dt19$CROPDMGEXP2
+
+dtclean <- dt19
+
+```
+
+
+### Calculate total weather impact on public health and select the top 10
+
+```{r Calculate total impact of weather events on public health }
+
+dmghealth <- dtclean %>%
+  group_by(EVTYPE)%>%
+   summarise(FATALITIES = sum(FATALITIES, na.rm = TRUE),
+            INJURIES = sum(INJURIES, na.rm = TRUE))
+
+# Events that caused most fatalities and injuries
+dmghealth2 <- dmghealth %>% arrange(desc(FATALITIES, INJURIES)) %>% 
+  drop_na()%>%
+  top_n(10)  
+
+```
+
+### Calculate total economic loss caused by weather events and select the top 10
+
+
+```{r Calculate total impact of weather events on crops and properties}
+
+dmgecon <- dtclean %>%
+  group_by(EVTYPE)%>%
+   summarise(PROPDMGEXP3 = sum(PROPDMGEXP3, na.rm = TRUE),
+             CROPDMGEXP3 = sum(CROPDMGEXP3, na.rm = TRUE))
+
+# Events that caused most properties and crops damage 
+dmgecon2 <- dmgecon %>% arrange(desc(PROPDMGEXP3)) %>% 
+  drop_na()%>%
+  top_n(10) 
+
+```
+
+# Results 
+
+### Across the United States, which types of events (as indicated in the EVTYPE variable) are most harmful ct to population health?
+
+```{r plot1, echo=TRUE}
+
+p1 <-dmghealth2 %>%
+  arrange(INJURIES) %>%    # First sort by val. 
+  mutate(EVTYPE=factor(EVTYPE, levels=EVTYPE)) %>%   # Update the factor levels
+  ggplot( aes(x=EVTYPE, y= INJURIES)) +
+         geom_segment( aes(xend=EVTYPE, yend=0)) +
+         geom_bar(stat="identity", fill = "blue") +
+           coord_flip() + 
+    ylab("Total number of injuries ") +
+    xlab("Event type") +
+    theme(legend.position="none")
+
+p2 <- dmghealth2 %>%
+  arrange(FATALITIES) %>%    
+  mutate(EVTYPE=factor(EVTYPE, levels=EVTYPE)) %>%  
+  ggplot( aes(x=EVTYPE, y= FATALITIES)) +
+    geom_segment( aes(xend=EVTYPE, yend=0)) +
+      geom_bar(stat="identity", fill = "blue") +
+       coord_flip() +
+      xlab("") +
+      ylab("Total number of fatalities ") +
+    theme(legend.position="none")
+  
+ p <- plot_grid(p1, p2)
+ 
+  title_gg <- ggplot() + 
+  labs(title = "Weather events most harmful to population health in USA (1950-2012)") +
+  theme(
+      plot.margin = margin(0, 0, 0, 7)
+  )
+  
+plot_grid(
+  title_gg, p,
+  ncol = 1,
+  rel_heights = c(0.1, 1)
+)
+
+ 
+```
+
+Tornadoes and thunderstormes caused the most injuries amongst all event types. However, for fatalities tornadoes and heat are the most dangerous weather events for population health during 1950-2012 in the USA. 
+
+### Across the United States, which types of events have the greatest economic consequences?
+
+```{r plot2,  echo=TRUE}
+
+p1 <- dmgecon2 %>%
+  arrange(PROPDMGEXP3) %>%   
+  mutate(EVTYPE=factor(EVTYPE, levels=EVTYPE)) %>%   
+  ggplot( aes(x=EVTYPE, y= log10(PROPDMGEXP3))) +
+    geom_segment( aes(xend=EVTYPE, yend=0)) +
+    geom_point( size=4, color="orange", fill=alpha("orange", 0.3), alpha=0.7, shape=21, stroke=1) +
+    coord_flip() +
+    theme_bw() +
+    xlab("Event type") +
+    ylab("Property loss (log10 $)")
+
+p2 <- dmgecon2 %>%
+  arrange(CROPDMGEXP3) %>%   
+  mutate(EVTYPE=factor(EVTYPE, levels=EVTYPE)) %>%   
+  ggplot( aes(x=EVTYPE, y= log10(CROPDMGEXP3))) +
+    geom_segment( aes(xend=EVTYPE, yend=0)) +
+    geom_point( size=4, color="orange", fill=alpha("orange", 0.3), alpha=0.7, shape=21, stroke=1) +
+    coord_flip() +
+    theme_bw() +
+    xlab(" ") +
+    ylab("Crops loss (log10 $)")
+
+p <- plot_grid(p1, p2) 
+  title_gg <- ggplot() + 
+  labs(title = "Total economic loss caused by weather events in USA (1950-2012)") +
+  theme(
+      plot.margin = margin(0, 0, 0, 7)
+  )
+plot_grid(
+  title_gg, p,
+  ncol = 1,
+   rel_heights = c(0.1, 1)
+)
+
+ 
+```
+
+The analyses for economic loss show that floods, hurricanes and hail are the weather events that caused more damage to the property sector. For crops the top events responsible for damage and financial loss are drought, floods, hurricanes and hail. 
+
+###  Total impact of weather events in USA states (1950-2012)
+
+```{r maps, echo = TRUE}
+
+# For reading and processing spatial data related to tmap
+library(sf) 
+library(grid)
+library(urbnmapr)
+library(tmap)
+
+states_sf <- get_urbn_map("states", sf = TRUE)
+# Total number of injuries 
+injuries <- dtclean %>%
+  group_by(STATE)%>%
+   summarise(INJURIES = sum(INJURIES, na.rm = TRUE))
+
+injuries2 <- injuries %>% 
+  drop_na()%>%
+  rename(state_abbv = "STATE") 
+
+spatial_data <- left_join(states_sf, injuries2,
+                         by = "state_abbv")
+p1 <- ggplot() +
+  geom_sf(spatial_data,
+          mapping = aes(fill = log10(INJURIES)),
+          color = "#ffffff", size = 0.25) +
+         labs(fill = "Injuries (log10)")+
+  coord_sf(datum = NA)
+
+# Total number of fatalities
+fatal <- dtclean %>%
+  group_by(STATE)%>%
+   summarise(FATALITIES = sum(FATALITIES, na.rm = TRUE))
+
+fatal2 <- fatal %>% 
+  drop_na()%>%
+  rename(state_abbv = "STATE") 
+
+spatial_data <- left_join(states_sf, fatal2,
+                         by = "state_abbv")
+p2 <- ggplot() +
+  geom_sf(spatial_data,
+          mapping = aes(fill = log10(FATALITIES)),
+          color = "#ffffff", size = 0.25) +
+  labs(fill = "Fatalities (log10)")+
+  coord_sf(datum = NA)
+
+# Total damage to crops 
+crop <- dtclean %>%
+  group_by(STATE)%>%
+   summarise(CROPDMGEXP3 = sum(CROPDMGEXP3, na.rm = TRUE))
+       
+crop2 <- crop %>% 
+  drop_na()%>%
+  rename(state_abbv = "STATE") 
+
+spatial_data <- left_join(states_sf, crop2,
+                       by = "state_abbv")
+p3 <- ggplot() +
+  geom_sf(spatial_data,
+          mapping = aes(fill = log10(CROPDMGEXP3)),
+          color = "#ffffff", size = 0.25) +
+  labs(fill = "Crops (log10)")+
+  coord_sf(datum = NA)
+
+
+# Total damage to properties
+prop <- dtclean %>%
+  group_by(STATE)%>%
+   summarise(PROPDMGEXP3 = sum(PROPDMGEXP3, na.rm = TRUE))
+
+prop2 <- prop %>%  
+  drop_na()%>%
+  rename(state_abbv = "STATE") 
+
+spatial_data <- left_join(states_sf, prop2,
+                         by = "state_abbv")
+p4 <- ggplot() +
+  geom_sf(spatial_data,
+          mapping = aes(fill = log10(PROPDMGEXP3)),
+          color = "#ffffff", size = 0.25) +
+  labs(fill = "Properties (log10)")+
+  coord_sf(datum = NA)
+
+p <- plot_grid(p1, p2, p3, p4)
+title_gg <- ggplot() + 
+  labs(title = "Total impact of weather events in USA states (1950-2012)") 
+
+ plot_grid(
+title_gg, p,
+  ncol = 1, 
+  rel_heights = c(0.1, 1)
+)
+
+```
+
+
+# Conclusion
+
+The data show the total impact of weather events in USA (1950-2012), which resulted in billions of dollars in economic loss and great number of fatalities and injuries. The maps show that the Southeast USA is most affected by weather events. Climate change predictions show that weather events will increase in the future. Studies of historical data are fundamental to understand the trends and seasonality of these events in order to inform governmental and private organizations, and civil society, to prepare and create alternatives to minimize the impacts of future weather events.  
